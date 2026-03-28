@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+model Property {
+  id             String          @id @default(uuid())
+  source         String
+  externalId     String          @unique @map("external_id")
+  
+  title          String
+  description    String?
+  price          Decimal?        @db.Decimal(12, 2)
+  priceNote      String?         @map("price_note")
+  propertyType   String          @map("property_type")
+  transactionType String         @map("transaction_type")
+  
+  // Location
+  address        String?
+  city           String?
+  district       String?
+  region         String?
+  latitude       Decimal?        @db.Decimal(10, 7)
+  longitude      Decimal?        @db.Decimal(10, 7)
+  
+  // Parameters
+  areaSize       Decimal?        @map("area_size") @db.Decimal(10, 2)
+  roomCount      String?         @map("room_count")
+  floor          Int?
+  totalFloors    Int?            @map("total_floors")
+  
+  // Media
+  images         String[]
+  thumbnail      String?
+  
+  // Meta
+  sourceUrl      String          @map("source_url")
+  scrapedAt      DateTime        @default(now()) @map("scraped_at")
+  publishedAt    DateTime?       @map("published_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  isActive       Boolean         @default(true) @map("is_active")
+  
+  // Relations
+  favorites      Favorite[]
+  notifications  Notification[]
+  
+  @@index([source, externalId])
+  @@index([city, propertyType, transactionType])
+  @@index([price, areaSize])
+  @@map("properties")
+}
+
+model User {
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  name                 String?
+  passwordHash         String    @map("password_hash")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  
+  // Notification preferences
+  emailNotifications   Boolean   @default(true) @map("email_notifications")
+  notificationFilters  Json?     @map("notification_filters")
+  
+  // Relations
+  favorites            Favorite[]
+  notifications        Notification[]
+  
+  @@map("users")
+}
+
+model Favorite {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  propertyId String   @map("property_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  notes      String?
+  
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, propertyId])
+  @@map("favorites")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  propertyId String   @map("property_id")
+  type       String   // 'new_listing', 'price_change'
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
+}
