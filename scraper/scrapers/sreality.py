@@ -149,6 +149,22 @@ class SrealityScraper(BaseScraper):
                 elif "dispozice" in item_name or "pokoje" in item_name:
                     room_count = str(item_value)
             
+            # Fallback to extracting from name if not found in items
+            if not room_count or not area_size:
+                import re
+                clean_name = name.replace('\xa0', ' ').replace('&nbsp;', ' ')
+                
+                if not room_count:
+                    layout_match = re.search(r'(\d\+(?:1|kk|[1-9]))', clean_name, re.IGNORECASE)
+                    if layout_match:
+                        room_count = layout_match.group(1).lower()
+                        
+                if not area_size:
+                    area_match = re.search(r'(\d+(?:[.,]\d+)?)\s*m', clean_name, re.IGNORECASE)
+                    if area_match:
+                        area_str = area_match.group(1).replace(',', '.')
+                        area_size = self.normalize_area(area_str)
+            
             # Images
             images = []
             thumbnail = None
@@ -162,16 +178,35 @@ class SrealityScraper(BaseScraper):
                         if not thumbnail:
                             thumbnail = img_url
             
-            # Property and transaction type
             seo = listing.get("seo", {})
-            category_main = seo.get("category_main_cb") if isinstance(seo, dict) else None
-            category_type = seo.get("category_type_cb") if isinstance(seo, dict) else None
+            category_main_cb = seo.get("category_main_cb") if isinstance(seo, dict) else None
+            category_type_cb = seo.get("category_type_cb") if isinstance(seo, dict) else None
+            category_sub_cb = seo.get("category_sub_cb") if isinstance(seo, dict) else None
             
-            property_type = self._map_category_to_type(category_main)
-            transaction_type = "sale" if category_type == 1 else "rent"
+            property_type = self._map_category_to_type(category_main_cb)
+            transaction_type = "sale" if category_type_cb == 1 else "rent"
             
-            # Build URL
-            source_url = f"{self.base_url}/detail/{external_id}"
+            # Build proper SEO URL
+            type_map = {1: "prodej", 2: "pronajem", 3: "drazby"}
+            main_map = {1: "byt", 2: "dum", 3: "pozemek", 4: "komercni", 5: "ostatni"}
+            sub_map = {
+                2: "1+1", 3: "1+kk", 4: "2+1", 5: "2+kk", 6: "3+1", 7: "3+kk",
+                8: "4+1", 9: "4+kk", 10: "5+1", 11: "5+kk", 12: "6-a-vice", 16: "atypicky",
+                47: "pokoj", 37: "rodinny", 39: "vila", 43: "chalupa", 33: "chata",
+                53: "pamatka", 40: "na-klic", 44: "zemedelska-usedlost",
+                19: "bydleni", 18: "komercni", 20: "pole", 22: "louka", 21: "les",
+                46: "rybnik", 48: "zahrada",
+                25: "kancelare", 26: "sklad", 27: "vyroba", 28: "obchodni-prostor",
+                29: "ubytovani", 30: "restaurace", 31: "zemedelsky", 38: "cinzovni-dum",
+                34: "garaz", 52: "garazove-stani"
+            }
+            
+            t_str = type_map.get(category_type_cb, "prodej")
+            m_str = main_map.get(category_main_cb, "byt")
+            s_str = sub_map.get(category_sub_cb, "ostatni")
+            loc_str = seo.get("locality", "lokalita") if isinstance(seo, dict) else "lokalita"
+            
+            source_url = f"{self.base_url}/detail/{t_str}/{m_str}/{s_str}/{loc_str}/{external_id}"
             
             return PropertyData(
                 source="sreality",

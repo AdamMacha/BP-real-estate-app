@@ -31,7 +31,7 @@ class ScraperScheduler:
             sreality_properties = await self.sreality_scraper.scrape(
                 category_main=1,  # Flats
                 category_type=1,  # Sale
-                max_pages=10
+                max_pages=settings.MAX_PAGES_SCHEDULED_SREALITY
             )
             self._save_properties(db, sreality_properties)
             
@@ -40,7 +40,7 @@ class ScraperScheduler:
             sreality_houses = await self.sreality_scraper.scrape(
                 category_main=2,  # Houses
                 category_type=1,  # Sale
-                max_pages=10
+                max_pages=settings.MAX_PAGES_SCHEDULED_SREALITY
             )
             self._save_properties(db, sreality_houses)
             
@@ -49,7 +49,7 @@ class ScraperScheduler:
             bezrealitky_flats = await self.bezrealitky_scraper.scrape(
                 transaction_type="prodej",
                 property_type="byty",
-                max_pages=10
+                max_pages=settings.MAX_PAGES_SCHEDULED_BEZREALITKY
             )
             self._save_properties(db, bezrealitky_flats)
             
@@ -58,7 +58,7 @@ class ScraperScheduler:
             bezrealitky_houses = await self.bezrealitky_scraper.scrape(
                 transaction_type="prodej",
                 property_type="domy",
-                max_pages=10
+                max_pages=settings.MAX_PAGES_SCHEDULED_BEZREALITKY
             )
             self._save_properties(db, bezrealitky_houses)
             

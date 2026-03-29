@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     REQUEST_DELAY: float = 1.0  # seconds between requests
     MAX_RETRIES: int = 3
     
+    # Scraping Limits
+    MAX_PAGES_SREALITY_DEFAULT: int = 50
+    MAX_PAGES_BEZREALITKY_DEFAULT: int = 30
+    MAX_PAGES_SCHEDULED_SREALITY: int = 50
+    MAX_PAGES_SCHEDULED_BEZREALITKY: int = 30
+    
     # Scheduling
     SCRAPE_CRON_HOUR: int = 2  # 2 AM
     SCRAPE_CRON_MINUTE: int = 0

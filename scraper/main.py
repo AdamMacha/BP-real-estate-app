@@ -68,7 +68,7 @@ async def scrape_sreality(
     background_tasks: BackgroundTasks,
     category_main: Optional[int] = None,
     category_type: Optional[int] = None,
-    max_pages: int = 3,
+    max_pages: int = settings.MAX_PAGES_SREALITY_DEFAULT,
     db: Session = Depends(get_db)
 ):
     """
@@ -107,7 +107,7 @@ async def scrape_bezrealitky(
     transaction_type: str = "prodej",
     property_type: str = "byty",
     locality: Optional[str] = None,
-    max_pages: int = 3,
+    max_pages: int = settings.MAX_PAGES_BEZREALITKY_DEFAULT,
     db: Session = Depends(get_db)
 ):
     """
@@ -145,7 +145,7 @@ async def scrape_bezrealitky(
 @app.post("/scrape/all")
 async def scrape_all(
     background_tasks: BackgroundTasks,
-    max_pages: int = 3,
+    max_pages: int = settings.MAX_PAGES_SREALITY_DEFAULT,
     db: Session = Depends(get_db)
 ):
     """Trigger scraping from all sources"""
