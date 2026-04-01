@@ -46,3 +46,20 @@ export function truncateText(text: string, maxLength: number): string {
 
     return text.substring(0, maxLength) + '...'
 }
+
+export function formatPricePerM2(pricePerM2: number | null | undefined): string {
+    if (pricePerM2 === null || pricePerM2 === undefined) {
+        return "N/A"
+    }
+
+    return new Intl.NumberFormat('cs-CZ', {
+        style: 'currency',
+        currency: 'CZK',
+        maximumFractionDigits: 0
+    }).format(pricePerM2) + " / m²"
+}
+
+export function calculatePercentage(current: number, base: number): number {
+    if (!current || !base) return 0
+    return Math.round(((base - current) / base) * 100)
+}

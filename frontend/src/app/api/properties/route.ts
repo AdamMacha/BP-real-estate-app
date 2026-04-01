@@ -107,15 +107,38 @@ export async function GET(request: NextRequest) {
             }
         })
 
+        // Calculate pricePerM2 for each property and find market averages
+        const mappedProperties = properties.map(p => {
+            const price = Number(p.price)
+            const size = Number(p.areaSize)
+            const pricePerM2 = (price && size) ? Math.round(price / size) : null
+            return { ...p, pricePerM2 }
+        })
+
+        // Market average calculation (if city is provided, focus on that city)
+        let marketAvgPricePerM2 = null
+        if (filters.city || mappedProperties.length > 0) {
+            const validPrices = mappedProperties
+                .filter(p => p.pricePerM2 !== null)
+                .map(p => p.pricePerM2 as number)
+
+            if (validPrices.length > 0) {
+                marketAvgPricePerM2 = Math.round(validPrices.reduce((a, b) => a + b, 0) / validPrices.length)
+            }
+        }
+
         // Calculate total pages
         const totalPages = Math.ceil(total / (filters.limit || 20))
 
         return NextResponse.json({
-            data: properties,
+            data: mappedProperties,
             total,
             page: filters.page || 1,
             limit: filters.limit || 20,
-            totalPages
+            totalPages,
+            marketStats: {
+                avgPricePerM2: marketAvgPricePerM2
+            }
         })
 
     } catch (error) {

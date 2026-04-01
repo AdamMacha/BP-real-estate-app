@@ -2,18 +2,20 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, Maximize, Bed, Heart } from 'lucide-react'
+import { MapPin, Maximize, Bed, Heart, TrendingDown } from 'lucide-react'
 import type { Property } from '@/types/property'
-import { formatPrice, formatArea, cn } from '@/lib/utils'
+import { formatPrice, formatArea, cn, formatPricePerM2, calculatePercentage } from '@/lib/utils'
 
 interface PropertyCardProps {
     property: Property
     onFavoriteToggle?: (propertyId: string) => void
     isFavorite?: boolean
+    avgPricePerM2?: number | null
 }
 
-export function PropertyCard({ property, onFavoriteToggle, isFavorite = false }: PropertyCardProps) {
+export function PropertyCard({ property, onFavoriteToggle, isFavorite = false, avgPricePerM2 }: PropertyCardProps) {
     const sourceColor = property.source === 'sreality' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+    const advantage = (property.pricePerM2 && avgPricePerM2) ? calculatePercentage(property.pricePerM2, avgPricePerM2) : 0
 
     return (
         <div className="group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
@@ -62,14 +64,30 @@ export function PropertyCard({ property, onFavoriteToggle, isFavorite = false }:
             {/* Content */}
             <div className="p-6">
                 {/* Price */}
-                <div className="mb-3">
-                    <div className="text-3xl font-bold text-gray-900">
-                        {formatPrice(Number(property.price))}
+                <div className="mb-3 flex items-start justify-between">
+                    <div>
+                        <div className="text-2xl font-bold text-gray-900 leading-none">
+                            {formatPrice(Number(property.price))}
+                        </div>
+                        {property.pricePerM2 && (
+                            <div className="text-sm font-medium text-gray-500 mt-1">
+                                {formatPricePerM2(property.pricePerM2)}
+                            </div>
+                        )}
                     </div>
-                    {property.priceNote && (
-                        <div className="text-sm text-gray-500 mt-1">{property.priceNote}</div>
+                    {advantage > 0 && (
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-100 shadow-sm animate-pulse">
+                                <TrendingDown className="w-3 h-3" />
+                                <span>-{advantage}%</span>
+                            </div>
+                            <span className="text-[10px] text-green-600 font-medium mt-0.5 whitespace-nowrap">pod průměrem</span>
+                        </div>
                     )}
                 </div>
+                {property.priceNote && (
+                    <div className="text-sm text-gray-500 mb-3 truncate">{property.priceNote}</div>
+                )}
 
                 {/* Title */}
                 <Link href={`/property/${property.id}`}>

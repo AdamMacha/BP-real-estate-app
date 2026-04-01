@@ -1,9 +1,14 @@
-import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { MapPin, Maximize, Bed, Calendar, ExternalLink, ArrowLeft, Building2, Home } from 'lucide-react'
+import { MapPin, Maximize, Bed, Calendar, ExternalLink, ArrowLeft, Building2, Home, TrendingDown } from 'lucide-react'
 import { formatPrice, formatArea, cn } from '@/lib/utils'
+import { InvestmentAnalysis } from '@/components/InvestmentAnalysis'
+import { PropertyManagement } from '@/components/PropertyManagement'
+import { Header } from '@/components/Header'
+import { auth } from '@clerk/nextjs/server'
+
 
 async function getProperty(id: string) {
     try {
@@ -17,9 +22,27 @@ async function getProperty(id: string) {
     }
 }
 
+async function getFavoriteData(propertyId: string, userId: string) {
+    try {
+        const favorite = await prisma.favorite.findUnique({
+            where: {
+                userId_propertyId: {
+                    userId,
+                    propertyId
+                }
+            }
+        })
+        return favorite
+    } catch (error) {
+        return null
+    }
+}
+
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
+    const { userId } = await auth()
     const property = await getProperty(id)
+    const favoriteData = userId ? await getFavoriteData(id, userId) : null
 
     if (!property) {
         notFound()
@@ -28,22 +51,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
     const sourceColor = property.source === 'sreality' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Navigation */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <Link
-                        href="/"
-                        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="font-medium">Zpět na výpis</span>
-                    </Link>
-                    <div className={cn("px-3 py-1 rounded-full text-sm font-semibold", sourceColor)}>
-                        Zdroj: {property.source}
-                    </div>
-                </div>
-            </div>
+        <div className="min-h-screen bg-gray-50">
+            <Header />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -62,20 +71,20 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                        <MapPin className="w-16 h-16 text-gray-400" />
+                                        <Home className="w-16 h-16 text-gray-400" />
                                     </div>
                                 )}
                             </div>
-                            {/* Thumbnails grid if more images */}
+                            
                             {property.images && property.images.length > 1 && (
-                                <div className="grid grid-cols-4 gap-2 p-2 bg-gray-50">
+                                <div className="grid grid-cols-4 gap-2 p-2 bg-gray-50 border-t border-gray-100">
                                     {property.images.slice(1, 5).map((img: string, idx: number) => (
-                                        <div key={idx} className="relative aspect-video rounded-lg overflow-hidden">
+                                        <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
                                             <Image
                                                 src={img}
-                                                alt={`${property.title} - ${idx + 2}`}
+                                                alt={`${property.title} ${idx + 2}`}
                                                 fill
-                                                className="object-cover hover:opacity-90 transition-opacity cursor-pointer"
+                                                className="object-cover hover:scale-110 transition-transform duration-300"
                                             />
                                             {idx === 3 && property.images.length > 5 && (
                                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold">
@@ -90,7 +99,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
                         {/* Description */}
                         <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
-                            <h2 className="text-xl font-bold text-gray-900 mb-4">Popis nemovitosti</h2>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-gray-900">Popis nemovitosti</h2>
+                                <div className={cn("px-3 py-1 rounded-full text-xs font-semibold", sourceColor)}>
+                                    Zdroj: {property.source}
+                                </div>
+                            </div>
                             <div className="prose prose-blue max-w-none text-gray-600 whitespace-pre-wrap">
                                 {property.description || "Popis není k dispozici."}
                             </div>
@@ -98,13 +112,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                     </div>
 
                     {/* Right Column - Key Info */}
-                    <div className="space-y-6">
-                        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 sticky top-24">
+                    <div className="space-y-6 lg:sticky lg:top-24 h-fit">
+                        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                             <h1 className="text-2xl font-bold text-gray-900 mb-2">{property.title}</h1>
 
                             <div className="flex items-center gap-2 text-gray-600 mb-6">
                                 <MapPin className="w-5 h-5 flex-shrink-0" />
-                                <span>{property.address || property.city}</span>
+                                <span className="text-sm">{property.address || property.city}</span>
                             </div>
 
                             <div className="mb-6 pb-6 border-b border-gray-100">
@@ -149,7 +163,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                                         <Home className="w-4 h-4" />
                                         <span className="text-sm">Typ</span>
                                     </div>
-                                    <div className="font-semibold text-gray-900 capitalize">
+                                    <div className="font-semibold text-gray-900 capitalize text-sm">
                                         {property.propertyType === 'flat' ? 'Byt' :
                                             property.propertyType === 'house' ? 'Dům' :
                                                 property.propertyType === 'land' ? 'Pozemek' : 'Komerční'}
@@ -161,17 +175,33 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                                 href={property.sourceUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-blue-200"
+                                className="flex items-center justify-center gap-2 w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-100 hover:shadow-blue-200"
                             >
                                 <span>Přejít na inzerát</span>
                                 <ExternalLink className="w-5 h-5" />
                             </a>
 
-                            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-400">
+                            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-400 border-t border-gray-100 pt-6">
                                 <Calendar className="w-4 h-4" />
                                 <span>Aktualizováno: {new Date(property.updatedAt).toLocaleDateString('cs-CZ')}</span>
                             </div>
                         </div>
+
+                        {/* Investment Analysis Section */}
+                        <InvestmentAnalysis 
+                            price={Number(property.price)} 
+                            city={property.city} 
+                        />
+
+                        {/* Property Management Section */}
+                        <PropertyManagement 
+                            propertyId={property.id} 
+                            initialData={{
+                                isFavorite: !!favoriteData,
+                                notes: favoriteData?.notes || '',
+                                status: (favoriteData as any)?.status || ''
+                            }}
+                        />
                     </div>
                 </div>
             </main>

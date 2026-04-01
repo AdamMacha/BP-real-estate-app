@@ -31,6 +31,7 @@ export interface Property {
     publishedAt?: Date | null
     updatedAt: Date
     isActive: boolean
+    pricePerM2?: number | null
 }
 
 export interface PropertyFilters {
@@ -56,4 +57,7 @@ export interface PaginatedResponse<T> {
     page: number
     limit: number
     totalPages: number
+    marketStats?: {
+        avgPricePerM2: number | null
+    }
 }

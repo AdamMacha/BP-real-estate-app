@@ -4,7 +4,7 @@ Agregátor nemovitostí z realitních portálů **sreality.cz** a **bezrealitky.
 
 ## Architektura
 
-- **Frontend**: Next.js 14+ s TypeScript a Tailwind CSS
+- **Frontend**: Next.js 16+ s TypeScript a Tailwind CSS
 - **Backend**: Python FastAPI pro web scraping
 - **Database**: PostgreSQL 15
 - **Scraping**: 
