@@ -72,7 +72,7 @@ export default async function FavoritesPage() {
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Zatím nemáte žádné oblíbené</h3>
                         <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-                            Ukládejte si zajímavé inzeráty pomocí ikony srdce v detailu nemovitosti nebo na kartě.
+                            Ukládejte si zajímavé inzeráty pomocí sekce Správa v detailu nemovitosti.
                         </p>
                         <Link href="/">
                             <Button className="h-14 px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-100 text-base border-none cursor-pointer">

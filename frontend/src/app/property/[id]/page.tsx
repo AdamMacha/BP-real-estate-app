@@ -190,7 +190,6 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                         {/* Investment Analysis Section */}
                         <InvestmentAnalysis 
                             price={Number(property.price)} 
-                            city={property.city} 
                         />
 
                         {/* Property Management Section */}

@@ -1,225 +1,78 @@
-# Real Estate Aggregator
+# Real Estate Analysis App (Bakalářská práce)
 
-Agregátor nemovitostí z realitních portálů **sreality.cz** a **bezrealitky.cz**. Aplikace umožňuje prohlížet všechny inzeráty na jednom místě a srovnávat ceny.
+Agregátor nemovitostí z portálů **sreality.cz** a **bezrealitky.cz**. Aplikace slouží k centralizovanému prohlížení inzerátů, sledování cenových trendů a výpočtu investičního potenciálu.
 
 ## Architektura
 
-- **Frontend**: Next.js 16+ s TypeScript a Tailwind CSS
-- **Backend**: Python FastAPI pro web scraping
-- **Database**: PostgreSQL 15
-- **Scraping**: 
-  - Sreality.cz - Extrakce přes neoficiální JSON API
-  - Bezrealitky.cz - Přímá extrakce Next.js dat (Apollo Cache) - *bez nutnosti prohlížeče*
+Aplikace je rozdělena na dvě hlavní části:
 
-## Požadavky
+1.  **Backend Scraper (Python/FastAPI)**:
+    *   **Sreality.cz** - Extrakce dat přes JSON API (vícenásobné asynchronní dotazy).
+    *   **Bezrealitky.cz** - Přímá extrakce Next.js Apollo Cache (lekce z GraphQL bez nutnosti prohlížeče).
+2.  **Frontend & App API (Next.js/Prisma)**:
+    *   **Dashboard** - Přehledné filtrování, řazení a tržní analýza (výpočet mediánu v reálném čase).
+    *   **Filtry** - Lokalita, cena, plocha, transakce.
+    *   **Správa** - Systém oblíbených s ukládáním poznámek a statusu (např. "prohlídka").
 
-- Docker a Docker Compose
-- Node.js 20+ (pro lokální vývoj bez Dockeru)
-- Python 3.11+ (pro lokální vývoj bez Dockeru)
+## Technologie
+
+-   **Frontend**: Next.js 15+, TypeScript, Tailwind CSS, Clerk (auth)
+-   **Backend**: Python 3.11+, FastAPI, SQLAlchemy, httpx, BeautifulSoup4
+-   **Databáze**: PostgreSQL 15, Prisma ORM
+-   **Infrastruktura**: Docker, Docker Compose
+
+---
 
 ## Rychlé spuštění (Docker)
 
-### 1. Naklonujte repozitář
+1.  **Příprava environmentu**:
+    ```bash
+    cp scraper/.env.example scraper/.env
+    # V adresáři frontend vytvořte .env.local s:
+    DATABASE_URL=postgresql://postgres:postgres@db:5432/realestate_db
+    ```
 
-```bash
-cd /Users/adammacha/Desktop/Bakalářská\ práce/BP-Aplikace
-```
+2.  **Spuštění celé stacku**:
+    ```bash
+    docker-compose up -d
+    ```
 
-### 2. Vytvořte environment soubory
+3.  **Inicializace databáze**:
+    ```bash
+    cd frontend && npm install && npx prisma db push
+    ```
 
-**Scraper (.env):**
-```bash
-cp scraper/.env.example scraper/.env
-```
+4.  **První scrapování**:
+    Navštivte [http://localhost:8000/scrape/all?max_pages=3](http://localhost:8000/scrape/all?max_pages=3) nebo použijte curl:
+    ```bash
+    curl -X POST "http://localhost:8000/scrape/all?max_pages=3"
+    ```
 
-**Frontend (.env.local):**
-```bash
-# V adresáři frontend vytvořte .env.local s:
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/realestate_db
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+5.  **Aplikace**:
+    Dostupná na [http://localhost:3000](http://localhost:3000).
 
-### 3. Spusťte aplikaci pomocí Docker Compose
-
-```bash
-docker-compose up -d
-```
-
-To spustí:
-- PostgreSQL na portu `5432`
-- Python scraper API na portu `8000`
-- Next.js frontend na portu `3000`
-
-### 4. Inicializujte databázi
-
-```bash
-# Spusťte migrace
-cd frontend
-npm install
-npx prisma generate
-npx prisma db push
-```
-
-### 5. Spusťte scraping
-
-Otevřete prohlížeč a navštivte:
-```
-http://localhost:8000/scrape/all?max_pages=3
-```
-
-Nebo použijte curl:
-```bash
-curl -X POST "http://localhost:8000/scrape/all?max_pages=3"
-```
-
-### 6. Otevřete aplikaci
-
-Přejděte na:
-```
-http://localhost:3000
-```
-
-## Lokální vývoj (bez Dockeru)
-
-### Backend (Python Scraper)
-
-```bash
-cd scraper
-
-# Vytvořte virtuální prostředí
-python -m venv venv
-source venv/bin/activate  # Na Windows: venv\Scripts\activate
-
-# Nainstalujte závislosti
-pip install -r requirements.txt
-
-# Spusťte databázi
-docker run -d -p 5432:5432 \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=realestate_db \
-  postgres:15-alpine
-
-# Inicializujte databázi
-python database.py
-
-# Spusťte server
-uvicorn main:app --reload
-```
-
-### Frontend (Next.js)
-
-```bash
-cd frontend
-
-# Nainstalujte závislosti
-npm install
-
-# Vygenerujte Prisma klienta
-npx prisma generate
-
-# Synchronizujte databázové schéma
-npx prisma db push
-
-# Spusťte dev server
-npm run dev
-```
-
-## API Endpoints
-
-### Scraper API (Port 8000)
-
-- `GET /` - Health check
-- `GET /health` - Detailní health check
-- `POST /scrape/sreality` - Scrape sreality.cz
-  - Query params: `category_main`, `category_type`, `max_pages`
-- `POST /scrape/bezrealitky` - Scrape bezrealitky.cz
-  - Query params: `transaction_type`, `property_type`, `locality`, `max_pages`
-- `POST /scrape/all` - Scrape všechny zdroje
-  - Query params: `max_pages`
-- `GET /scrape/status` - Status scrapingu a statistiky
-
-### Next.js API (Port 3000)
-
-- `GET /api/properties` - Získat nemovitosti s filtry
-  - Query params: `city`, `minPrice`, `maxPrice`, `minSize`, `maxSize`, `propertyType`, `transactionType`, `roomCount`, `page`, `limit`, `sortBy`, `sortOrder`
-- `GET /api/properties/[id]` - Detail konkrétní nemovitosti
-
-## Funkce
-
-### Implementováno
-
-- ✅ Scraping sreality.cz přes JSON API
-- ✅ Scraping bezrealitky.cz pomocí extrakce dat z Next.js (Apollo Cache)
-- ✅ PostgreSQL databáze s Prisma ORM
-- ✅ RESTful API v FastAPI
-- ✅ Next.js frontend s Tailwind CSS
-- ✅ Filtrování podle ceny, lokace, velikosti
-- ✅ Responsivní design
-- ✅ Pagination
-- ✅ Docker Compose setup
-- ✅ Ukládání oblíbených inzerátů (vyžaduje autentizaci)
-- ✅ Detail stránka nemovitosti
-- ✅ Autentizace a autorizace
-
-### Plánované a doporučení
-
-- ⏳ Email notifikace pro nové inzeráty
+---
 
 ## Struktura projektu
 
-```
-BP-Aplikace/
-├── scraper/                 # Python scraping service
-│   ├── scrapers/           # Implementace konkrétních portálů
-│   ├── tools/              # Utility (mazání DB, migrace)
-│   ├── debug/              # Testovací a ladící skripty
-│   ├── main.py             # FastAPI aplikace
-│   ├── database.py         # SQLAlchemy modely
-│   ├── config.py           # Konfigurace
-│   ├── scheduler.py        # APScheduler pro cron
-│   └── requirements.txt
-├── frontend/               # Next.js aplikace
-│   ├── src/
-│   │   ├── app/           # Next.js App Router
-│   │   ├── components/     # React komponenty
-│   │   ├── lib/           # Utility funkce
-│   │   └── types/         # TypeScript typy
-│   ├── prisma/
-│   │   └── schema.prisma   # Database schema
-│   └── package.json
-└── docker-compose.yml      # Docker orchestrace
-```
+-   `scraper/` - Autonomní služba pro sběr a normalizaci dat do DB.
+    -   `scrapers/` - Implementace jednotlivých portálů.
+    -   `tools/` - Utility pro správu (mazání, migrace).
+-   `frontend/` - Webová aplikace a API rozhraní pro uživatele.
+    -   `prisma/` - Schéma databáze (**jednotný zdroj pravdy**).
+    -   `src/app/api/` - Endpointy pro frontend a tržní statistiky.
+-   `docker-compose.yml` - Definice kontejnerů a sítí.
 
-## Konfigurace
+---
 
-### Scraper Environment Variables
+## Seznam testovaných funkcí
 
-```env
-DATABASE_URL=postgresql://user:password@host:port/database
-API_HOST=0.0.0.0
-API_PORT=8000
-REQUEST_DELAY=1.0
-MAX_RETRIES=3
-SCRAPE_CRON_HOUR=2
-SCRAPE_CRON_MINUTE=0
-```
+V projektu se nachází dokument [**testing_results.md**](./testing_results.md), který detailně popisuje testovací scénáře (API i UI).
 
-### Frontend Environment Variables
+**Klíčové testy zahrnují:**
+-   Správnost výpočtu tržního mediánu (`medianPricePerM2`).
+-   Stabilitu extrakce dat bez využití prohlížeče (Playwright byl nahrazen efektivnějšími metodami).
+-   Responzivitu rozhraní a správu stavů "Favoritů".
 
-```env
-DATABASE_URL=postgresql://user:password@host:port/database
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-## Přispívání
-
-Projekt je součástí bakalářské práce. Pro návrhy a bug reporty vytvořte issue.
-
-## Licence
-
-Tento projekt je vytvořen pro akademické účely.
-
-## Upozornění
-
-Web scraping může porušovat Terms of Service některých webových stránek.
+---
+*Vytvořeno jako součást bakalářské práce.*

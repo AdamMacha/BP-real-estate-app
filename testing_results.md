@@ -47,7 +47,7 @@ Tyto endpointy slouží k obsluze frontendu a komunikaci s databází přes Pris
 | **M2** | Funkčnost filtrů | Změna ceny a typu (Byt/Dům). | Seznam se okamžitě aktualizuje podle parametrů. | ✅ OK |
 | **M3** | Tržní analýza (Badge) | Kontrola karty s výhodnou cenou. | Zobrazí se zelený badge "-X% pod mediánem". | ✅ OK |
 | **M4** | Stránka detailu | Proklik z karty na detail. | Načte se detailní popis a galerie fotek. | ✅ OK |
-| **M5** | Responzivita | Test na mobilním zařízení. | Menu se sbalí do "hamburgeru", karty jsou pod sebou. | ✅ OK |
+| **M5** | Responzivita | Test na mobilním zařízení. | UI se přizpůsobí (skrytí textu v menu, úprava mřížky). | ✅ OK |
 | **M6** | Autentizace (Clerk) | Přihlášení uživatele. | Zpřístupní se sekce "Oblíbené" a synchronizace profilu. | ✅ OK |
 
 ---

@@ -6,10 +6,9 @@ import { formatPrice } from '@/lib/utils'
 
 interface InvestmentAnalysisProps {
     price: number
-    city?: string | null
 }
 
-export function InvestmentAnalysis({ price, city }: InvestmentAnalysisProps) {
+export function InvestmentAnalysis({ price }: InvestmentAnalysisProps) {
     const [estimatedRent, setEstimatedRent] = useState<number>(Math.round(price * 0.04 / 12)) // Default to 4% yield
     
     const annualRent = estimatedRent * 12
