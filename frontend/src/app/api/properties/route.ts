@@ -108,23 +108,51 @@ export async function GET(request: NextRequest) {
         })
 
         // Calculate pricePerM2 for each property and find market averages
-        const mappedProperties = properties.map(p => {
+        const mappedProperties = properties.map((p: any) => {
             const price = Number(p.price)
             const size = Number(p.areaSize)
             const pricePerM2 = (price && size) ? Math.round(price / size) : null
             return { ...p, pricePerM2 }
         })
 
-        // Market average calculation (if city is provided, focus on that city)
-        let marketAvgPricePerM2 = null
-        if (filters.city || mappedProperties.length > 0) {
-            const validPrices = mappedProperties
-                .filter(p => p.pricePerM2 !== null)
-                .map(p => p.pricePerM2 as number)
+        // Calculate median price per m2 across all properties matching core filters in database
+        let marketMedianPricePerM2 = null
+        
+        // Define filters for market statistics (more broad than current search to have enough data)
+        const statsWhere: any = {
+            isActive: true,
+            propertyType: filters.propertyType,
+            transactionType: filters.transactionType,
+            price: { not: null },
+            areaSize: { not: null, gt: 0 }
+        }
 
-            if (validPrices.length > 0) {
-                marketAvgPricePerM2 = Math.round(validPrices.reduce((a, b) => a + b, 0) / validPrices.length)
+        // If specific city is filtered, use it for stats too
+        if (filters.city) {
+            statsWhere.OR = [
+                { city: { contains: filters.city, mode: 'insensitive' } },
+                { address: { contains: filters.city, mode: 'insensitive' } }
+            ]
+        }
+
+        // Fetch prices and area sizes for all relevant properties
+        const statsData = await prisma.property.findMany({
+            where: statsWhere,
+            select: {
+                price: true,
+                areaSize: true
             }
+        })
+
+        if (statsData.length > 0) {
+            const pricesPerM2 = statsData
+                .map((p: any) => Number(p.price) / Number(p.areaSize))
+                .sort((a: number, b: number) => a - b)
+            
+            const mid = Math.floor(pricesPerM2.length / 2)
+            marketMedianPricePerM2 = pricesPerM2.length % 2 !== 0 
+                ? Math.round(pricesPerM2[mid])
+                : Math.round((pricesPerM2[mid - 1] + pricesPerM2[mid]) / 2)
         }
 
         // Calculate total pages
@@ -137,7 +165,7 @@ export async function GET(request: NextRequest) {
             limit: filters.limit || 20,
             totalPages,
             marketStats: {
-                avgPricePerM2: marketAvgPricePerM2
+                medianPricePerM2: marketMedianPricePerM2
             }
         })
 

@@ -10,12 +10,12 @@ interface PropertyCardProps {
     property: Property
     onFavoriteToggle?: (propertyId: string) => void
     isFavorite?: boolean
-    avgPricePerM2?: number | null
+    medianPricePerM2?: number | null
 }
 
-export function PropertyCard({ property, onFavoriteToggle, isFavorite = false, avgPricePerM2 }: PropertyCardProps) {
+export function PropertyCard({ property, onFavoriteToggle, isFavorite = false, medianPricePerM2 }: PropertyCardProps) {
     const sourceColor = property.source === 'sreality' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-    const advantage = (property.pricePerM2 && avgPricePerM2) ? calculatePercentage(property.pricePerM2, avgPricePerM2) : 0
+    const advantage = (property.pricePerM2 && medianPricePerM2) ? calculatePercentage(property.pricePerM2, medianPricePerM2) : 0
 
     return (
         <div className="group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
@@ -81,7 +81,7 @@ export function PropertyCard({ property, onFavoriteToggle, isFavorite = false, a
                                 <TrendingDown className="w-3 h-3" />
                                 <span>-{advantage}%</span>
                             </div>
-                            <span className="text-[10px] text-green-600 font-medium mt-0.5 whitespace-nowrap">pod průměrem</span>
+                            <span className="text-[10px] text-green-600 font-medium mt-0.5 whitespace-nowrap">pod mediánem</span>
                         </div>
                     )}
                 </div>

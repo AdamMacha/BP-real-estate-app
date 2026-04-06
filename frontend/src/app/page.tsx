@@ -110,7 +110,7 @@ export default function HomePage() {
                     <PropertyCard
                       key={property.id}
                       property={property}
-                      avgPricePerM2={data.marketStats?.avgPricePerM2}
+                      medianPricePerM2={data.marketStats?.medianPricePerM2}
                     />
                   ))}
                 </div>

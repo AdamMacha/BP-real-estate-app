@@ -135,7 +135,7 @@ class BezrealitkyScraper(BaseScraper):
             # Source URL
             source_url = f"{self.base_url}/nemovitosti-byty-domy/{uri}"
             
-            # Fetch detail page to get description
+            # Fetch detail page to get description and country info
             description = None
             try:
                 detail_response = await client.get(source_url)
@@ -146,6 +146,21 @@ class BezrealitkyScraper(BaseScraper):
                     detail_data = json.loads(detail_next_data.string)
                     orig_advert = detail_data.get('props', {}).get('pageProps', {}).get('origAdvert', {})
                     description = orig_advert.get('description')
+                    
+                    # Filtering for non-Czech properties (German specifically)
+                    country = orig_advert.get('country')
+                    address_raw = advert.get('address({"locale":"CS"})', '')
+                    
+                    is_non_cz = (
+                        (country and country.upper() not in ['CZ', 'CZE', 'CZECH REPUBLIC']) or
+                        'Německo' in address_raw or 
+                        'Germany' in address_raw or
+                        'Deutschland' in address_raw
+                    )
+                    
+                    if is_non_cz:
+                        self.logger.info(f"Skipping non-Czech property: {advert_id} ({address_raw})")
+                        return None
             except Exception as e:
                 self.logger.warning(f"Could not fetch detail description for {advert_id}: {e}")
             

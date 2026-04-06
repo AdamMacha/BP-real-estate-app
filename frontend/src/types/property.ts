@@ -58,6 +58,6 @@ export interface PaginatedResponse<T> {
     limit: number
     totalPages: number
     marketStats?: {
-        avgPricePerM2: number | null
+        medianPricePerM2: number | null
     }
 }

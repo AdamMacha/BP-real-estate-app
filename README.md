@@ -8,8 +8,8 @@ Agregátor nemovitostí z realitních portálů **sreality.cz** a **bezrealitky.
 - **Backend**: Python FastAPI pro web scraping
 - **Database**: PostgreSQL 15
 - **Scraping**: 
-  - Sreality.cz - Neoficiální JSON API
-  - Bezrealitky.cz - Playwright web scraping
+  - Sreality.cz - Neoficiální JSON API (unprotected)
+  - Bezrealitky.cz - Extrakce dat z Next.js (Apollo GraphQL Cache)
 
 ## Požadavky
 
@@ -93,9 +93,6 @@ source venv/bin/activate  # Na Windows: venv\Scripts\activate
 # Nainstalujte závislosti
 pip install -r requirements.txt
 
-# Nainstalujte Playwright prohlížeče
-playwright install chromium
-
 # Spusťte databázi
 docker run -d -p 5432:5432 \
   -e POSTGRES_USER=postgres \
@@ -148,12 +145,12 @@ npm run dev
   - Query params: `city`, `minPrice`, `maxPrice`, `minSize`, `maxSize`, `propertyType`, `transactionType`, `roomCount`, `page`, `limit`, `sortBy`, `sortOrder`
 - `GET /api/properties/[id]` - Detail konkrétní nemovitosti
 
-## 🎯 Funkce
+## Funkce
 
-### ✅ Implementováno
+### Implementováno
 
 - ✅ Scraping sreality.cz přes JSON API
-- ✅ Scraping bezrealitky.cz pomocí Playwright
+- ✅ Scraping bezrealitky.cz pomocí extrakce dat z Next.js (Apollo Cache)
 - ✅ PostgreSQL databáze s Prisma ORM
 - ✅ RESTful API v FastAPI
 - ✅ Next.js frontend s Tailwind CSS
@@ -161,16 +158,15 @@ npm run dev
 - ✅ Responsivní design
 - ✅ Pagination
 - ✅ Docker Compose setup
+- ✅ Ukládání oblíbených inzerátů (vyžaduje autentizaci)
+- ✅ Detail stránka nemovitosti
+- ✅ Autentizace a autorizace
 
-### 🔄 Plánované
+### Plánované a doporučení
 
-- ⏳ Ukládání oblíbených inzerátů (vyžaduje autentizaci)
 - ⏳ Email notifikace pro nové inzeráty
-- ⏳ Automatický denní scraping přes cron
-- ⏳ Detail stránka nemovitosti
-- ⏳ Material-UI alternativa pro srovnání
 
-## 📁 Struktura projektu
+## Struktura projektu
 
 ```
 BP-Aplikace/
@@ -196,7 +192,7 @@ BP-Aplikace/
 └── docker-compose.yml      # Docker orchestrace
 ```
 
-## 🔧 Konfigurace
+## Konfigurace
 
 ### Scraper Environment Variables
 
@@ -217,14 +213,14 @@ DATABASE_URL=postgresql://user:password@host:port/database
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-## 🤝 Přispívání
+## Přispívání
 
 Projekt je součástí bakalářské práce. Pro návrhy a bug reporty vytvořte issue.
 
-## 📄 Licence
+## Licence
 
 Tento projekt je vytvořen pro akademické účely.
 
-## ⚠️ Upozornění
+## Upozornění
 
 Web scraping může porušovat Terms of Service některých webových stránek.
