@@ -8,9 +8,6 @@ import enum
 
 from config import settings
 
-# NOTE: The primary source of truth for the database schema is 
-# frontend/prisma/schema.prisma. This file must be kept in sync.
-
 # Create engine
 engine = create_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

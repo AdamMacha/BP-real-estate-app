@@ -68,11 +68,3 @@ Tyto endpointy slouží k obsluze frontendu a komunikaci s databází přes Pris
 
 ---
 
-## 5. Doporučení pro obhajobu
-U obhajoby doporučuji demonstrovat:
-1. **Rychlost scrapingu** (díky absenci prohlížeče je proces bleskový).
-2. **Konzistenci schématu** (SQLAlchemy v scraperu 1:1 k Prisma schématu).
-3. **Reálné použití filtrů** a okamžitý přepočet tržního mediánu.
-
----
-*Dokument aktualizován pro finální verzi BP - Duben 2026.*
