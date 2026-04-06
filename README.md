@@ -8,8 +8,8 @@ Agregátor nemovitostí z realitních portálů **sreality.cz** a **bezrealitky.
 - **Backend**: Python FastAPI pro web scraping
 - **Database**: PostgreSQL 15
 - **Scraping**: 
-  - Sreality.cz - Neoficiální JSON API (unprotected)
-  - Bezrealitky.cz - Extrakce dat z Next.js (Apollo GraphQL Cache)
+  - Sreality.cz - Extrakce přes neoficiální JSON API
+  - Bezrealitky.cz - Přímá extrakce Next.js dat (Apollo Cache) - *bez nutnosti prohlížeče*
 
 ## Požadavky
 
@@ -79,7 +79,7 @@ Přejděte na:
 http://localhost:3000
 ```
 
-## 💻 Lokální vývoj (bez Dockeru)
+## Lokální vývoj (bez Dockeru)
 
 ### Backend (Python Scraper)
 
@@ -171,10 +171,9 @@ npm run dev
 ```
 BP-Aplikace/
 ├── scraper/                 # Python scraping service
-│   ├── scrapers/
-│   │   ├── base.py         # Base scraper class
-│   │   ├── sreality.py     # Sreality scraper
-│   │   └── bezrealitky.py  # Bezrealitky scraper
+│   ├── scrapers/           # Implementace konkrétních portálů
+│   ├── tools/              # Utility (mazání DB, migrace)
+│   ├── debug/              # Testovací a ladící skripty
 │   ├── main.py             # FastAPI aplikace
 │   ├── database.py         # SQLAlchemy modely
 │   ├── config.py           # Konfigurace

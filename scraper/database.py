@@ -1,12 +1,15 @@
-from sqlalchemy import create_engine, Column, String, Integer, Numeric, DateTime, Boolean, Enum, Text, ARRAY, JSON
+from sqlalchemy import create_engine, Column, String, Integer, Numeric, DateTime, Boolean, Enum, Text, ARRAY, JSON, UniqueConstraint, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
 import enum
 
 from config import settings
+
+# NOTE: The primary source of truth for the database schema is 
+# frontend/prisma/schema.prisma. This file must be kept in sync.
 
 # Create engine
 engine = create_engine(settings.DATABASE_URL)
@@ -72,6 +75,10 @@ class Property(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
+    # Relationships
+    favorites = relationship("Favorite", back_populates="property", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="property", cascade="all, delete-orphan")
+
 
 class User(Base):
     __tablename__ = "users"
@@ -86,26 +93,41 @@ class User(Base):
     email_notifications = Column(Boolean, default=True)
     notification_filters = Column(JSON)  # Stored filter preferences
 
+    # Relationships
+    favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+
 
 class Favorite(Base):
     __tablename__ = "favorites"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, nullable=False)
-    property_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    property_id = Column(String, ForeignKey("properties.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(Text)
+    status = Column(String) # For tracking acquisition phase
+
+    # Relationships
+    user = relationship("User", back_populates="favorites")
+    property = relationship("Property", back_populates="favorites")
+
+    __table_args__ = (UniqueConstraint('user_id', 'property_id', name='_user_property_uc'),)
 
 
 class Notification(Base):
     __tablename__ = "notifications"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, nullable=False)
-    property_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    property_id = Column(String, ForeignKey("properties.id", ondelete="CASCADE"), nullable=False)
     type = Column(String, nullable=False)  # 'new_listing', 'price_change'
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="notifications")
+    property = relationship("Property", back_populates="notifications")
 
 
 # Database utilities

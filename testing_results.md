@@ -1,64 +1,78 @@
-# Dokumentace testování (Bakalářská práce)
+# Dokumentace testovaní (Bakalářská práce)
 
 Tento dokument slouží jako podklad pro kapitolu o testování v bakalářské práci. Obsahuje přehled testovacích scénářů, metodiku testování a výsledky ověření klíčových funkcí aplikace.
 
+---
+
 ## 1. Metodika testování
 
-Aplikace byla testována kombinací dvou přístupů:
+Aplikace byla testována kombinací tří základních přístupů:
 1. **Manuální testování (Black-box):** Ověření uživatelského rozhraní (UI) a celkového chování systému z pohledu koncového uživatele.
-2. **Integrační testování API:** Automatizované ověření správné komunikace mezi backendem (Python/FastAPI), databází a externími zdroji dat (Sreality, Bezrealitky).
+2. **Integrační testování API:** Automatizované i manuální ověření správné komunikace mezi backendem (Python/FastAPI), databází a externími zdroji dat.
+3. **Validace datového schématu:** Kontrola konzistence dat mezi scraperem (SQLAlchemy) a aplikačním rozhraním (Prisma).
 
 ---
 
-## 2. Přehled testovacích scénářů
+## 2. Testované API Endpointy
 
-### 2.1 Manuální testy (Frontend + UI)
+### 2.1 Backend Scraper (Port 8000)
+Tyto endpointy slouží k ovládání a monitorování procesu získávání dat.
+
+| Metoda | Endpoint | Cíl testu | Očekávaný výsledek | Stav |
+|:---|:---|:---|:---|:---|
+| `GET` | `/health` | Health check celého systému | Vrátí JSON se stavem "ok" a dostupností služeb. | ✅ OK |
+| `GET` | `/scrape/status` | Monitoring běžících úloh | Vrátí počet inzerátů v DB a status posledního scrapingu. | ✅ OK |
+| `POST` | `/scrape/sreality` | Spuštění scraperu pro Sreality | Spustí asynchronní úlohu, vrátí potvrzení o startu. | ✅ OK |
+| `POST` | `/scrape/bezrealitky` | Spuštění scraperu pro Bezrealitky | Spustí asynchronní úlohu (Next.js data extraction). | ✅ OK |
+| `POST` | `/scrape/all` | Hromadné spuštění všech zdrojů | Spustí sekvenční scrapování všech portálů. | ✅ OK |
+
+### 2.2 Aplikační API (Next.js - Port 3000)
+Tyto endpointy slouží k obsluze frontendu a komunikaci s databází přes Prisma ORM.
+
+| Metoda | Endpoint | Cíl testu | Očekávaný výsledek | Stav |
+|:---|:---|:---|:---|:---|
+| `GET` | `/api/properties` | Načtení seznamu s filtry | Vrátí stránkovaný seznam + tržní medián (medianPricePerM2). | ✅ OK |
+| `GET` | `/api/properties/[id]` | Detail konkrétní nemovitosti | Vrátí všechna pole inzerátu včetně textového popisu. | ✅ OK |
+| `GET` | `/api/properties?city=Praha` | Filtrace podle lokality | Vrátí pouze záznamy z Prahy (case-insensitive). | ✅ OK |
+| `POST` | `/api/favorites` | Uložení do oblíbených | Vytvoří záznam v tabulce `favorites` (vyžaduje auth). | ✅ OK |
+| `GET` | `/api/properties/[fake-id]` | Ošetření chyb (404) | Správně vrátí HTTP 404 a chybovou hlášku. | ✅ OK |
+
+---
+
+## 3. Manuální UI Testy (Frontend)
 
 | ID | Název testu | Popis kroku | Očekávaný výsledek | Stav |
-|:---|:---|:---|:---|:---|
-| M1 | Načtení seznamu nemovitostí | Otevření hlavní stránky aplikace. | Zobrazí se karty s nemovitostmi z obou zdrojů. | ✅ OK |
-| M2 | Filtrace podle města | Zadání "Praha" do filtru lokality. | Seznam obsahuje pouze nemovitosti s adresou v Praze. | ✅ OK |
-| M3| Filtrace podle ceny | Nastavení minimální a maximální ceny. | Zobrazené nemovitosti spadají do zadaného cenového intervalu. | ✅ OK |
-| M4 | Zobrazení detailu | Kliknutí na tlačítko "Zobrazit detail" u náhodné karty. | Otevře se stránka s kompletním popisem, fotogalerií a technickými parametry. | ✅ OK |
-| M5 | Responzivita UI | Změna velikosti okna prohlížeče na mobilní zobrazení. | Layout se přizpůsobí (změna mřížky karet, mobilní menu). | ✅ OK |
-
-### 2.2 Integrační testy (Backend / API)
-
-| ID | Endpoint | Metoda | Cíl testu | Výsledek (HTTP) | Stav |
 |:---|:---|:---|:---|:---|:---|
-| A1 | `/health` | GET | Ověření dostupnosti API a stavu scraperů. | 200 OK | ✅ OK |
-| A2 | `/scrape/status` | GET | Získání statistik o počtu záznamů v DB. | 200 OK | ✅ OK |
-| A3 | `/scrape/sreality` | POST | Spuštění asynchronního scrape úlohy pro Sreality. | 200 OK (started) | ✅ OK |
-| A4 | `/scrape/bezrealitky` | POST | Ověření startu scraperu pro Bezrealitky. | 200 OK (started) | ✅ OK |
-| A5 | Neexistující ID | GET | Požadavek na detail neexistující nemovitosti. | 404 Not Found | ✅ OK |
+| **M1** | Zobrazení dashboardu | Otevření hlavní stránky. | Zobrazí se mřížka karet s reálnými daty z DB. | ✅ OK |
+| **M2** | Funkčnost filtrů | Změna ceny a typu (Byt/Dům). | Seznam se okamžitě aktualizuje podle parametrů. | ✅ OK |
+| **M3** | Tržní analýza (Badge) | Kontrola karty s výhodnou cenou. | Zobrazí se zelený badge "-X% pod mediánem". | ✅ OK |
+| **M4** | Stránka detailu | Proklik z karty na detail. | Načte se detailní popis a galerie fotek. | ✅ OK |
+| **M5** | Responzivita | Test na mobilním zařízení. | Menu se sbalí do "hamburgeru", karty jsou pod sebou. | ✅ OK |
+| **M6** | Autentizace (Clerk) | Přihlášení uživatele. | Zpřístupní se sekce "Oblíbené" a synchronizace profilu. | ✅ OK |
 
 ---
 
-## 3. Validace specifikací a hraniční stavy
+## 4. Hraniční stavy a validace stability
 
-### 3.1 Prázdná databáze
-*   **Scénář:** Vymazání databáze (pomocí `clear_db.py`) a následné načtení frontendu.
-*   **Očekávané chování:** Aplikace nespadne, zobrazí korektní informaci "Nebyly nalezeny žádné nemovitosti".
-*   **Výsledek:** ✅ Ověřeno. Frontend ošetřuje prázdné pole `data`.
+### 4.1 Prázdná databáze
+*   **Scénář:** Vymazání databáze a následné načtení frontendu.
+*   **Výsledek:** UI nezamrzne, zobrazí korektní informaci "Žádné nemovitosti nenalezeny".
 
-### 3.2 Chyba externího API (Scraping)
-*   **Scénář:** Odpojení internetu nebo zadání neplatné URL pro scraping.
-*   **Očekávané chování:** Scraper zaznamená chybu do logu, retry mechanismus (knihovna `tenacity`) se pokusí o znovupřipojení, backend nezamrzne.
-*   **Výsledek:** ✅ Ověřeno. Díky `BackgroundTasks` zůstává API responzivní i při selhání scraperu.
+### 4.2 Duplicita dat (Deduplikace)
+*   **Scénář:** Opakované spuštění scraperu pro stejný portál.
+*   **Výsledek:** Díky unikátnímu klíči `external_id` (indexovanému) nedochází k duplicitám, data se pouze aktualizují (`upsert` v SQL logice).
 
-### 3.3 Validace filtrů (Kombinace)
-*   **Scénář:** Kombinace Prodej + Byt + Praha.
-*   **Očekávané chování:** SQL dotaz v Prismě vygeneruje správný `WHERE` klauzuli.
-*   **Výsledek:** ✅ Ověřeno.
+### 4.3 Odolnost proti změnám v HTML (Bezrealitky)
+*   **Scénář:** Změna vizuálního layoutu Bezrealitky.
+*   **Výsledek:** Scraper zůstává funkční, protože extrahuje surová data z Next.js Apollo Cache, nikoliv z DOM elementů (odstraněna závislost na Playwright).
 
 ---
 
-## 4. Doporučení pro obhajobu
-
-Při demonstraci aplikace doporučuji ukázat:
-1. **Živé spuštění scraperu** (přes Postman nebo `/health` endpoint).
-2. **Rychlou filtraci** na frontendu (ukázka bleskové odezvy díky indexům v DB).
-3. **Detail nemovitosti**, kde je vidět stažený textový popis (důkaz, že scraper navštěvuje i detailní stránky).
+## 5. Doporučení pro obhajobu
+U obhajoby doporučuji demonstrovat:
+1. **Rychlost scrapingu** (díky absenci prohlížeče je proces bleskový).
+2. **Konzistenci schématu** (SQLAlchemy v scraperu 1:1 k Prisma schématu).
+3. **Reálné použití filtrů** a okamžitý přepočet tržního mediánu.
 
 ---
-*Dokument vytvořen jako součást BP - BP Real Estate App.*
+*Dokument aktualizován pro finální verzi BP - Duben 2026.*
