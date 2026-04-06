@@ -1,9 +1,9 @@
-from playwright.async_api import async_playwright
-from bs4 import BeautifulSoup
-from typing import List, Optional
-from datetime import datetime
 import re
 import json
+import asyncio
+import httpx
+from bs4 import BeautifulSoup
+from typing import List, Optional
 
 from scrapers.base import BaseScraper, PropertyData
 from config import settings
@@ -23,16 +23,16 @@ class BezrealitkyScraper(BaseScraper):
         locality: Optional[str] = None,
         max_pages: int = 5
     ) -> List[PropertyData]:
-        """Scrape bezrealitky.cz by extracting Next.js data"""
+        """Scrape bezrealitky.cz by extracting Next.js data using httpx"""
         all_properties = []
         
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-            )
-            page = await context.new_page()
-            
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "cs,en-US;q=0.9,en;q=0.8"
+        }
+        
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=30.0) as client:
             try:
                 for page_num in range(1, max_pages + 1):
                     self.logger.info(f"Scraping bezrealitky.cz page {page_num}/{max_pages}")
@@ -41,18 +41,14 @@ class BezrealitkyScraper(BaseScraper):
                     self.logger.info(f"URL: {url}")
                     
                     try:
-                        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                        
-                        # Počkáme na vykreslení
-                        await page.wait_for_timeout(8000)
-                        
-                        # Zkusíme scrollovat pro trigger lazy loading
-                        for _ in range(3):
-                            await page.evaluate("window.scrollBy(0, 500)")
-                            await page.wait_for_timeout(500)
+                        response = await client.get(url)
+                        if response.status_code == 404:
+                            self.logger.warning(f"Zřejmě jsme na konci výsledků (404) na stránce {page_num}")
+                            break
+                        response.raise_for_status()
                         
                         # Získáme HTML
-                        content = await page.content()
+                        content = response.text
                         soup = BeautifulSoup(content, 'html.parser')
                         
                         # Hledáme __NEXT_DATA__ script s JSON daty
@@ -62,28 +58,42 @@ class BezrealitkyScraper(BaseScraper):
                                 data = json.loads(next_data.string)
                                 apollo_cache = data.get('props', {}).get('pageProps', {}).get('apolloCache', {})
                                 
-                                # Najdeme všechny inzeráty v cache
-                                for key, value in apollo_cache.items():
-                                    if key.startswith('Advert:') and isinstance(value, dict):
-                                        prop_data = self._parse_apollo_advert(value, apollo_cache)
-                                        if prop_data:
-                                            all_properties.append(prop_data)
+                                # Najdeme všechny inzeráty v cache a vytvoříme tasky pro jejich parsování a stažení detailu
+                                advert_keys = [k for k in apollo_cache.keys() if k.startswith('Advert:') and isinstance(apollo_cache[k], dict)]
                                 
-                                self.logger.info(f"Extracted {len([k for k in apollo_cache.keys() if k.startswith('Advert:')])} adverts from Apollo cache")
+                                if advert_keys:
+                                    tasks = [self._parse_apollo_advert(client, apollo_cache[k], apollo_cache) for k in advert_keys]
+                                    parsed_listings = await asyncio.gather(*tasks, return_exceptions=True)
+                                    
+                                    for res in parsed_listings:
+                                        if isinstance(res, Exception):
+                                            self.logger.error(f"Task failed: {res}")
+                                        elif res:
+                                            all_properties.append(res)
+                                
+                                adverts_count = len(advert_keys)
+                                self.logger.info(f"Extracted and fetched {adverts_count} adverts from Apollo cache")
+                                
+                                if adverts_count == 0:
+                                    self.logger.warning("No adverts found in Apollo cache. Maybe the end of results.")
+                                    break
                                 
                             except json.JSONDecodeError as e:
                                 self.logger.error(f"Failed to parse Next.js data: {e}")
                         else:
                             self.logger.warning("No __NEXT_DATA__ found on page")
                         
+                    except httpx.HTTPError as e:
+                        self.logger.error(f"HTTP error on page {page_num}: {e}")
+                        break
                     except Exception as e:
                         self.logger.error(f"Error on page {page_num}: {e}")
                         break
                     
                     self.rate_limit()
                     
-            finally:
-                await browser.close()
+            except Exception as e:
+                self.logger.error(f"Client error: {e}")
         
         self.logger.info(f"Total properties scraped: {len(all_properties)}")
         return all_properties
@@ -105,7 +115,7 @@ class BezrealitkyScraper(BaseScraper):
         
         url = f"{self.base_url}/vypis/{trans}/{prop}"
         
-        params = []
+        params = ["country=ceska-republika"]
         if page > 1:
             params.append(f"page={page}")
         if locality:
@@ -116,11 +126,28 @@ class BezrealitkyScraper(BaseScraper):
         
         return url
     
-    def _parse_apollo_advert(self, advert: dict, apollo_cache: dict) -> Optional[PropertyData]:
-        """Parse advert from Apollo GraphQL cache"""
+    async def _parse_apollo_advert(self, client: httpx.AsyncClient, advert: dict, apollo_cache: dict) -> Optional[PropertyData]:
+        """Parse advert from Apollo GraphQL cache and fetch description from detail page"""
         try:
             advert_id = str(advert.get('id', ''))
             uri = advert.get('uri', advert_id)
+            
+            # Source URL
+            source_url = f"{self.base_url}/nemovitosti-byty-domy/{uri}"
+            
+            # Fetch detail page to get description
+            description = None
+            try:
+                detail_response = await client.get(source_url)
+                detail_response.raise_for_status()
+                detail_soup = BeautifulSoup(detail_response.text, 'html.parser')
+                detail_next_data = detail_soup.find('script', id='__NEXT_DATA__')
+                if detail_next_data:
+                    detail_data = json.loads(detail_next_data.string)
+                    orig_advert = detail_data.get('props', {}).get('pageProps', {}).get('origAdvert', {})
+                    description = orig_advert.get('description')
+            except Exception as e:
+                self.logger.warning(f"Could not fetch detail description for {advert_id}: {e}")
             
             # Title from imageAltText or construct from address
             title = advert.get('imageAltText({"locale":"CS"})', '')
@@ -184,7 +211,7 @@ class BezrealitkyScraper(BaseScraper):
                 source="bezrealitky",
                 external_id=f"bezrealitky_{advert_id}",
                 title=title,
-                description=None,
+                description=description,
                 price=float(price) if price else None,
                 price_note=None,
                 property_type=property_type,
@@ -197,7 +224,7 @@ class BezrealitkyScraper(BaseScraper):
                 room_count=room_count,
                 images=images,
                 thumbnail=thumbnail,
-                source_url=f"{self.base_url}/nemovitosti/{uri}",
+                source_url=source_url,
                 published_at=None
             )
             

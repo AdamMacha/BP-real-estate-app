@@ -149,7 +149,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                                         {property.roomCount || '-'}
                                     </div>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-xl">
+                                {/* <div className="p-4 bg-gray-50 rounded-xl">
                                     <div className="flex items-center gap-2 text-gray-500 mb-1">
                                         <Building2 className="w-4 h-4" />
                                         <span className="text-sm">Patro</span>
@@ -157,7 +157,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                                     <div className="font-semibold text-gray-900">
                                         {property.floor !== null ? `${property.floor}.` : '-'}
                                     </div>
-                                </div>
+                                </div> */}
                                 <div className="p-4 bg-gray-50 rounded-xl">
                                     <div className="flex items-center gap-2 text-gray-500 mb-1">
                                         <Home className="w-4 h-4" />

@@ -54,6 +54,10 @@ class BaseScraper(ABC):
         self.max_retries = settings.MAX_RETRIES
         self.logger = logging.getLogger(self.__class__.__name__)
     
+    def is_available(self) -> bool:
+        """Simple availability check"""
+        return True
+    
     @abstractmethod
     async def scrape(self, **kwargs) -> List[PropertyData]:
         """

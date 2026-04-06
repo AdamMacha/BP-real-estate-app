@@ -75,7 +75,7 @@ export function PropertyCard({ property, onFavoriteToggle, isFavorite = false, a
                             </div>
                         )}
                     </div>
-                    {advantage > 0 && (
+                    {advantage > 0 && property.transactionType !== 'rent' && property.propertyType !== 'commercial' && property.propertyType !== 'land' && (
                         <div className="flex flex-col items-end">
                             <div className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-100 shadow-sm animate-pulse">
                                 <TrendingDown className="w-3 h-3" />

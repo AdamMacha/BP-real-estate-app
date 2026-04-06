@@ -59,7 +59,11 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "database": "connected"
+        "database": "connected",
+        "scrapers": {
+            "sreality": sreality_scraper.is_available(),
+            "bezrealitky": bezrealitky_scraper.is_available()
+        }
     }
 
 
@@ -279,5 +283,6 @@ if __name__ == "__main__":
         "main:app",
         host=settings.API_HOST,
         port=settings.API_PORT,
-        reload=True
+        reload=True,
+        reload_excludes=["venv", ".venv", "venv/*", ".*"]
     )

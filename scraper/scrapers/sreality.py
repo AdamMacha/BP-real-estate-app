@@ -1,4 +1,5 @@
 import httpx
+import asyncio
 from typing import List, Optional
 from datetime import datetime
 
@@ -65,10 +66,14 @@ class SrealityScraper(BaseScraper):
                         self.logger.info("No more listings found")
                         break
                     
-                    for listing in listings:
-                        property_data = self._parse_listing(listing)
-                        if property_data:
-                            all_properties.append(property_data)
+                    tasks = [self._parse_listing(client, listing) for listing in listings]
+                    parsed_listings = await asyncio.gather(*tasks, return_exceptions=True)
+                    
+                    for res in parsed_listings:
+                        if isinstance(res, Exception):
+                            self.logger.error(f"Task failed: {res}")
+                        elif res:
+                            all_properties.append(res)
                     
                     self.logger.info(f"Scraped {len(listings)} properties from page {page}")
                     
@@ -82,8 +87,8 @@ class SrealityScraper(BaseScraper):
         self.logger.info(f"Total properties scraped from sreality.cz: {len(all_properties)}")
         return all_properties
     
-    def _parse_listing(self, listing: dict) -> Optional[PropertyData]:
-        """Parse a single listing from sreality API response"""
+    async def _parse_listing(self, client: httpx.AsyncClient, listing: dict) -> Optional[PropertyData]:
+        """Parse a single listing from sreality API response and fetch description"""
         try:
             # Extract basic info
             external_id = str(listing.get("hash_id", ""))
@@ -91,6 +96,20 @@ class SrealityScraper(BaseScraper):
                 return None
             
             name = listing.get("name", "")
+            
+            description = None
+            try:
+                # Fetch details for the description
+                detail_url = f"{self.api_url}/{external_id}"
+                detail_response = await self.fetch_with_retry(client.get, detail_url)
+                detail_response.raise_for_status()
+                detail_data = detail_response.json()
+                
+                text_field = detail_data.get("text", {})
+                if isinstance(text_field, dict):
+                    description = text_field.get("value")
+            except Exception as e:
+                self.logger.warning(f"Could not fetch detail description for {external_id}: {e}")
             
             # Price
             price_raw = listing.get("price")
@@ -212,7 +231,7 @@ class SrealityScraper(BaseScraper):
                 source="sreality",
                 external_id=f"sreality_{external_id}",
                 title=name,
-                description=None,  # Not available in list view
+                description=description,
                 price=price,
                 price_note=price_note,
                 property_type=property_type,

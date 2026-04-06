@@ -36,7 +36,7 @@ class TransactionType(str, enum.Enum):
 class Property(Base):
     __tablename__ = "properties"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     source = Column(String, nullable=False)  
     external_id = Column(String, unique=True, nullable=False, index=True)
     
@@ -76,7 +76,7 @@ class Property(Base):
 class User(Base):
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String, unique=True, nullable=False)
     name = Column(String)
     password_hash = Column(String, nullable=False)
@@ -90,9 +90,9 @@ class User(Base):
 class Favorite(Base):
     __tablename__ = "favorites"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False)
-    property_id = Column(UUID(as_uuid=True), nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, nullable=False)
+    property_id = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(Text)
 
@@ -100,9 +100,9 @@ class Favorite(Base):
 class Notification(Base):
     __tablename__ = "notifications"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False)
-    property_id = Column(UUID(as_uuid=True), nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, nullable=False)
+    property_id = Column(String, nullable=False)
     type = Column(String, nullable=False)  # 'new_listing', 'price_change'
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
