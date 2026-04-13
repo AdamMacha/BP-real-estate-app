@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     # Scraping
     SREALITY_API_URL: str = "https://www.sreality.cz/api/cs/v2/estates"
-    BEZREALITKY_BASE_URL: str = "https://www.bezrealitky.cz"
+    BEZREALITKY_BASE_URL: str = "https://www.bezrealitky.cz/vyhledat?location=exact&osm_value=%C4%8Cesko"
     
     # Rate limiting
     REQUEST_DELAY: float = 1.0  # seconds between requests

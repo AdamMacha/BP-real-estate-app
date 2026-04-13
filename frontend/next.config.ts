@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
         hostname: 'www.bezrealitky.cz',
       },
     ],
+    unoptimized: true,
   },
 };
 

@@ -1,10 +1,12 @@
 'use client'
+// Turbopack cache bust 2
 
 import Image from 'next/image'
 import Link from 'next/link'
 import { MapPin, Maximize, Bed, Heart, TrendingDown } from 'lucide-react'
 import type { Property } from '@/types/property'
 import { formatPrice, formatArea, cn, formatPricePerM2, calculatePercentage } from '@/lib/utils'
+import { SafeImage } from './SafeImage'
 
 interface PropertyCardProps {
     property: Property
@@ -21,18 +23,13 @@ export function PropertyCard({ property, onFavoriteToggle, isFavorite = false, m
         <div className="group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
             {/* Image */}
             <Link href={`/property/${property.id}`} className="block relative h-64 overflow-hidden">
-                {property.thumbnail ? (
-                    <Image
-                        src={property.thumbnail}
-                        alt={property.title}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                        <MapPin className="w-16 h-16 text-gray-400" />
-                    </div>
-                )}
+                <SafeImage
+                    src={property.thumbnail || ''}
+                    alt={property.title}
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                    fallbackIcon={<MapPin className="w-16 h-16 text-gray-400" />}
+                />
 
                 {/* Source badge */}
                 <div className={cn(

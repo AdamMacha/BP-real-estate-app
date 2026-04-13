@@ -1,37 +1,62 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { PropertyCard } from '@/components/PropertyCard'
 import { PropertyFilters } from '@/components/PropertyFilters'
+import { PropertyGrid } from '@/components/PropertyGrid'
+import { PropertySortSelect } from '@/components/PropertySortSelect'
+import { Pagination } from '@/components/Pagination'
+import { LoadingState, ErrorState, EmptyState } from '@/components/PropertyListStates'
 import { Header } from '@/components/Header'
-import { Loader2, Home } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import type { PropertyFilters as IPropertyFilters, PaginatedResponse, Property } from '@/types/property'
 
-export default function HomePage() {
-  const [filters, setFilters] = useState<IPropertyFilters>({
-    page: 1,
-    limit: 12,
-    sortBy: 'updatedAt',
-    sortOrder: 'desc'
+const buildQueryParams = (filters: IPropertyFilters) => {
+  const params = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.append(key, String(value))
+    }
+  })
+  return params
+}
+
+function HomeContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const [filters, setFilters] = useState<IPropertyFilters>(() => {
+    const p = searchParams
+    return {
+      page: Number(p.get('page')) || 1,
+      limit: Number(p.get('limit')) || 12,
+      sortBy: (p.get('sortBy') as IPropertyFilters['sortBy']) || 'updatedAt',
+      sortOrder: (p.get('sortOrder') as IPropertyFilters['sortOrder']) || 'desc',
+      city: p.get('city') || undefined,
+      propertyType: (p.get('propertyType') as IPropertyFilters['propertyType']) || undefined,
+      transactionType: (p.get('transactionType') as IPropertyFilters['transactionType']) || undefined,
+      roomCount: p.get('roomCount') || undefined,
+      minPrice: Number(p.get('minPrice')) || undefined,
+      maxPrice: Number(p.get('maxPrice')) || undefined,
+      minSize: Number(p.get('minSize')) || undefined,
+      maxSize: Number(p.get('maxSize')) || undefined,
+    }
   })
 
-  // Fetch properties
+  useEffect(() => {
+    const params = buildQueryParams(filters)
+    if (window.location.search !== `?${params.toString()}`) {
+      router.push(`/?${params.toString()}`, { scroll: false })
+    }
+  }, [filters, router])
+
   const { data, isLoading, error } = useQuery<PaginatedResponse<Property>>({
     queryKey: ['properties', filters],
     queryFn: async () => {
-      const params = new URLSearchParams()
-
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.append(key, String(value))
-        }
-      })
-
+      const params = buildQueryParams(filters)
       const response = await fetch(`/api/properties?${params}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch properties')
-      }
+      if (!response.ok) throw new Error('Failed to fetch properties')
       return response.json()
     }
   })
@@ -41,11 +66,14 @@ export default function HomePage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const handleSortChange = (sortBy: IPropertyFilters['sortBy'], sortOrder: IPropertyFilters['sortOrder']) => {
+    setFilters(prev => ({ ...prev, sortBy, sortOrder, page: 1 }))
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50">
       <Header />
 
-      {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters sidebar */}
@@ -69,118 +97,42 @@ export default function HomePage() {
                   </p>
                 )}
               </div>
-
-              {/* Sort */}
-              <select
-                value={`${filters.sortBy}-${filters.sortOrder}`}
-                onChange={(e) => {
-                  const [sortBy, sortOrder] = e.target.value.split('-') as [any, any]
-                  setFilters(prev => ({ ...prev, sortBy, sortOrder, page: 1 }))
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="updatedAt-desc">Nejnovější</option>
-                <option value="price-asc">Cena: Od nejnižší</option>
-                <option value="price-desc">Cena: Od nejvyšší</option>
-                <option value="areaSize-desc">Plocha: Od největší</option>
-                <option value="areaSize-asc">Plocha: Od nejmenší</option>
-              </select>
+              <PropertySortSelect filters={filters} onSortChange={handleSortChange} />
             </div>
 
-            {/* Loading state */}
-            {isLoading && (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-              </div>
-            )}
+            {isLoading && <LoadingState />}
+            {error && <ErrorState />}
 
-            {/* Error state */}
-            {error && (
-              <div className="text-center py-20">
-                <p className="text-red-600 text-lg">Chyba při načítání nemovitostí</p>
-                <p className="text-gray-600 mt-2">Zkuste to prosím znovu později</p>
-              </div>
-            )}
-
-            {/* Properties grid */}
             {data && data.data.length > 0 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {data.data.map((property) => (
-                    <PropertyCard
-                      key={property.id}
-                      property={property}
-                      medianPricePerM2={data.marketStats?.medianPricePerM2}
-                    />
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {data.totalPages > 1 && (
-                  <div className="mt-12 flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => handlePageChange(data.page - 1)}
-                      disabled={data.page === 1}
-                      className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Předchozí
-                    </button>
-
-                    <div className="flex gap-2">
-                      {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
-                        let pageNum
-                        if (data.totalPages <= 5) {
-                          pageNum = i + 1
-                        } else if (data.page <= 3) {
-                          pageNum = i + 1
-                        } else if (data.page >= data.totalPages - 2) {
-                          pageNum = data.totalPages - 4 + i
-                        } else {
-                          pageNum = data.page - 2 + i
-                        }
-
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => handlePageChange(pageNum)}
-                            className={`w-10 h-10 rounded-xl transition-all ${data.page === pageNum
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'border border-gray-300 hover:bg-gray-50'
-                              }`}
-                          >
-                            {pageNum}
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    <button
-                      onClick={() => handlePageChange(data.page + 1)}
-                      disabled={data.page === data.totalPages}
-                      className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Další
-                    </button>
-                  </div>
-                )}
+                <PropertyGrid
+                  properties={data.data}
+                  medianPricePerM2={data.marketStats?.medianPricePerM2}
+                />
+                <Pagination
+                  currentPage={data.page}
+                  totalPages={data.totalPages}
+                  onPageChange={handlePageChange}
+                />
               </>
             )}
 
-            {/* Empty state */}
-            {data && data.data.length === 0 && (
-              <div className="text-center py-20">
-                <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Žádné nemovitosti nenalezeny
-                </h3>
-                <p className="text-gray-600">
-                  Zkuste změnit filtry nebo vyhledávací kritéria
-                </p>
-              </div>
-            )}
+            {data && data.data.length === 0 && <EmptyState />}
           </div>
         </div>
       </main>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }

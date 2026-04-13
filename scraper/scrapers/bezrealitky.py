@@ -147,15 +147,24 @@ class BezrealitkyScraper(BaseScraper):
                     orig_advert = detail_data.get('props', {}).get('pageProps', {}).get('origAdvert', {})
                     description = orig_advert.get('description')
                     
-                    # Filtering for non-Czech properties (German specifically)
+                    # Filtering for non-Czech properties (German, Austrian specifically)
                     country = orig_advert.get('country')
                     address_raw = advert.get('address({"locale":"CS"})', '')
+                    title = advert.get('imageAltText({"locale":"CS"})', '')
+                    if not title:
+                        title = advert.get('address({"locale":"CS"})', f'Nemovitost {advert_id}')
                     
+                    foreign_terms = [
+                        'Německo', 'Germany', 'Deutschland', 'Stuttgart', 'Pirna', 'Wien', 'Rakousko', 
+                        'Austria', 'Österreich', 'Slovensko', 'Slovakia', 'Bratislava', 'Chorvatsko', 
+                        'Croatia', 'Španělsko', 'Spain', 'Tenerife'
+                    ]
+                    
+                    is_foreign_term_found = any(term.lower() in address_raw.lower() or term.lower() in title.lower() for term in foreign_terms)
+
                     is_non_cz = (
-                        (country and country.upper() not in ['CZ', 'CZE', 'CZECH REPUBLIC']) or
-                        'Německo' in address_raw or 
-                        'Germany' in address_raw or
-                        'Deutschland' in address_raw
+                        (country and country.upper() not in ['CZ', 'CZE', 'CZECH REPUBLIC', 'ČESKO', 'ČESKÁ REPUBLIKA']) or
+                        is_foreign_term_found
                     )
                     
                     if is_non_cz:

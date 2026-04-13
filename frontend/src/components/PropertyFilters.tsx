@@ -14,6 +14,11 @@ export function PropertyFilters({ filters, onFiltersChange }: PropertyFiltersPro
     const [citySearch, setCitySearch] = useState(filters.city || '')
     const [citySuggestions, setCitySuggestions] = useState<string[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
+
+    // Sync input with external filter changes (e.g. initial URL load)
+    useEffect(() => {
+        setCitySearch(filters.city || '')
+    }, [filters.city])
     const cityInputRef = useRef<HTMLInputElement>(null)
     const suggestionsRef = useRef<HTMLDivElement>(null)
 

@@ -1,21 +1,17 @@
-import Image from 'next/image'
-import Link from 'next/link'
+// Turbopack cache bust
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { MapPin, Maximize, Bed, Calendar, ExternalLink, ArrowLeft, Building2, Home, TrendingDown } from 'lucide-react'
-import { formatPrice, formatArea, cn } from '@/lib/utils'
+import { Header } from '@/components/Header'
 import { InvestmentAnalysis } from '@/components/InvestmentAnalysis'
 import { PropertyManagement } from '@/components/PropertyManagement'
-import { Header } from '@/components/Header'
+import { PropertyImageGallery } from '@/components/PropertyImageGallery'
+import { PropertyDescription } from '@/components/PropertyDescription'
+import { PropertyInfoPanel } from '@/components/PropertyInfoPanel'
 import { auth } from '@clerk/nextjs/server'
-
 
 async function getProperty(id: string) {
     try {
-        const property = await prisma.property.findUnique({
-            where: { id }
-        })
-        return property
+        return await prisma.property.findUnique({ where: { id } })
     } catch (error) {
         console.error('Error fetching property:', error)
         return null
@@ -24,16 +20,10 @@ async function getProperty(id: string) {
 
 async function getFavoriteData(propertyId: string, userId: string) {
     try {
-        const favorite = await prisma.favorite.findUnique({
-            where: {
-                userId_propertyId: {
-                    userId,
-                    propertyId
-                }
-            }
+        return await prisma.favorite.findUnique({
+            where: { userId_propertyId: { userId, propertyId } }
         })
-        return favorite
-    } catch (error) {
+    } catch {
         return null
     }
 }
@@ -44,11 +34,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
     const property = await getProperty(id)
     const favoriteData = userId ? await getFavoriteData(id, userId) : null
 
-    if (!property) {
-        notFound()
-    }
-
-    const sourceColor = property.source === 'sreality' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+    if (!property) notFound()
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -56,149 +42,39 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column - Images & Description */}
+                    {/* Left column */}
                     <div className="lg:col-span-2 space-y-8">
-                        {/* Image Gallery */}
-                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                            <div className="relative aspect-video w-full">
-                                {property.images && property.images.length > 0 ? (
-                                    <Image
-                                        src={property.images[0]}
-                                        alt={property.title}
-                                        fill
-                                        className="object-cover"
-                                        priority
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                        <Home className="w-16 h-16 text-gray-400" />
-                                    </div>
-                                )}
-                            </div>
-                            
-                            {property.images && property.images.length > 1 && (
-                                <div className="grid grid-cols-4 gap-2 p-2 bg-gray-50 border-t border-gray-100">
-                                    {property.images.slice(1, 5).map((img: string, idx: number) => (
-                                        <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
-                                            <Image
-                                                src={img}
-                                                alt={`${property.title} ${idx + 2}`}
-                                                fill
-                                                className="object-cover hover:scale-110 transition-transform duration-300"
-                                            />
-                                            {idx === 3 && property.images.length > 5 && (
-                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold">
-                                                    +{property.images.length - 5}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Description */}
-                        <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900">Popis nemovitosti</h2>
-                                <div className={cn("px-3 py-1 rounded-full text-xs font-semibold", sourceColor)}>
-                                    Zdroj: {property.source}
-                                </div>
-                            </div>
-                            <div className="prose prose-blue max-w-none text-gray-600 whitespace-pre-wrap">
-                                {property.description || "Popis není k dispozici."}
-                            </div>
-                        </div>
+                        <PropertyImageGallery
+                            images={property.images ?? []}
+                            title={property.title}
+                        />
+                        <PropertyDescription
+                            description={property.description}
+                            source={property.source}
+                        />
                     </div>
 
-                    {/* Right Column - Key Info */}
+                    {/* Right column */}
                     <div className="space-y-6 lg:sticky lg:top-24 h-fit">
-                        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">{property.title}</h1>
-
-                            <div className="flex items-center gap-2 text-gray-600 mb-6">
-                                <MapPin className="w-5 h-5 flex-shrink-0" />
-                                <span className="text-sm">{property.address || property.city}</span>
-                            </div>
-
-                            <div className="mb-6 pb-6 border-b border-gray-100">
-                                <div className="text-4xl font-bold text-blue-600">
-                                    {formatPrice(Number(property.price))}
-                                </div>
-                                {property.priceNote && (
-                                    <div className="text-sm text-gray-500 mt-1">{property.priceNote}</div>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 mb-8">
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <div className="flex items-center gap-2 text-gray-500 mb-1">
-                                        <Maximize className="w-4 h-4" />
-                                        <span className="text-sm">Plocha</span>
-                                    </div>
-                                    <div className="font-semibold text-gray-900">
-                                        {property.areaSize ? formatArea(Number(property.areaSize)) : '-'}
-                                    </div>
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <div className="flex items-center gap-2 text-gray-500 mb-1">
-                                        <Bed className="w-4 h-4" />
-                                        <span className="text-sm">Dispozice</span>
-                                    </div>
-                                    <div className="font-semibold text-gray-900">
-                                        {property.roomCount || '-'}
-                                    </div>
-                                </div>
-                                {/* <div className="p-4 bg-gray-50 rounded-xl">
-                                    <div className="flex items-center gap-2 text-gray-500 mb-1">
-                                        <Building2 className="w-4 h-4" />
-                                        <span className="text-sm">Patro</span>
-                                    </div>
-                                    <div className="font-semibold text-gray-900">
-                                        {property.floor !== null ? `${property.floor}.` : '-'}
-                                    </div>
-                                </div> */}
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <div className="flex items-center gap-2 text-gray-500 mb-1">
-                                        <Home className="w-4 h-4" />
-                                        <span className="text-sm">Typ</span>
-                                    </div>
-                                    <div className="font-semibold text-gray-900 capitalize text-sm">
-                                        {property.propertyType === 'flat' ? 'Byt' :
-                                            property.propertyType === 'house' ? 'Dům' :
-                                                property.propertyType === 'land' ? 'Pozemek' : 'Komerční'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <a
-                                href={property.sourceUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-100 hover:shadow-blue-200"
-                            >
-                                <span>Přejít na inzerát</span>
-                                <ExternalLink className="w-5 h-5" />
-                            </a>
-
-                            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-400 border-t border-gray-100 pt-6">
-                                <Calendar className="w-4 h-4" />
-                                <span>Aktualizováno: {new Date(property.updatedAt).toLocaleDateString('cs-CZ')}</span>
-                            </div>
-                        </div>
-
-                        {/* Investment Analysis Section */}
-                        <InvestmentAnalysis 
-                            price={Number(property.price)} 
+                        <PropertyInfoPanel
+                            title={property.title}
+                            address={property.address}
+                            city={property.city}
+                            price={property.price ? Number(property.price) : null}
+                            priceNote={property.priceNote}
+                            areaSize={property.areaSize ? Number(property.areaSize) : null}
+                            roomCount={property.roomCount}
+                            propertyType={property.propertyType}
+                            sourceUrl={property.sourceUrl}
+                            updatedAt={property.updatedAt}
                         />
-
-                        {/* Property Management Section */}
-                        <PropertyManagement 
-                            propertyId={property.id} 
+                        <InvestmentAnalysis price={Number(property.price)} />
+                        <PropertyManagement
+                            propertyId={property.id}
                             initialData={{
                                 isFavorite: !!favoriteData,
                                 notes: favoriteData?.notes || '',
-                                status: (favoriteData as any)?.status || ''
+                                status: (favoriteData as any)?.status || '',
                             }}
                         />
                     </div>

@@ -36,7 +36,7 @@ services:
         condition: service_healthy
     volumes:
       - ./scraper:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
 
   # Next.js Frontend
   frontend:
@@ -57,6 +57,17 @@ services:
       - /app/node_modules
       - /app/.next
     command: npm run dev
+
+  # Database UI (Alternative to Prisma Studio)
+  adminer:
+    image: adminer
+    container_name: realestate_adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
